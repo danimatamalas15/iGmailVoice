@@ -40,15 +40,15 @@ export class PdfExporter {
 
       // 3. Format Filename: [email_destinatario]_[asunto]_[ddmmaa]_[hh:mm].pdf
       const now = new Date();
-      const ddmmaa = \`\${String(now.getDate()).padStart(2, '0')}\${String(now.getMonth()+1).padStart(2, '0')}\${String(now.getFullYear()).slice(2)}\`;
-      const hhmm = \`\${String(now.getHours()).padStart(2, '0')}-\${String(now.getMinutes()).padStart(2, '0')}\`; // Cannot use ':' in filename
+      const ddmmaa = `${String(now.getDate()).padStart(2, '0')}${String(now.getMonth()+1).padStart(2, '0')}${String(now.getFullYear()).slice(2)}`;
+      const hhmm = `${String(now.getHours()).padStart(2, '0')}-${String(now.getMinutes()).padStart(2, '0')}`; // Cannot use ':' in filename
       
       const emailMatch = email.from.match(/<([^>]+)>/);
       const emailPlain = emailMatch ? emailMatch[1] : email.from;
       const safeEmail = emailPlain.replace(/[^a-zA-Z0-9@.-]/g, '_');
       const safeSubject = email.subject.substring(0, 15).replace(/[^a-zA-Z0-9]/g, '_');
 
-      const fileName = \`\${safeEmail}_\${safeSubject}_\${ddmmaa}_\${hhmm}.pdf\`;
+      const fileName = `${safeEmail}_${safeSubject}_${ddmmaa}_${hhmm}.pdf`;
 
       // 4. Save to Downloads
       if (Platform.OS === 'android') {
