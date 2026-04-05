@@ -17,6 +17,11 @@ try {
 const app = express();
 app.use(bodyParser.json());
 
+// Simple root endpoint to verify server is running
+app.get('/', (req, res) => {
+  res.send('✅ iGmailVoice Webhook Server is running properly!');
+});
+
 // Webhook endpoint for Gmail Pub/Sub Push
 app.post('/webhook', async (req, res) => {
   try {
