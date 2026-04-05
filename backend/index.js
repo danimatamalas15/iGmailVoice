@@ -17,9 +17,23 @@ try {
 const app = express();
 app.use(bodyParser.json());
 
-// Simple root endpoint to verify server is running
+// Root endpoint - serves HTML for Google Site Verification
 app.get('/', (req, res) => {
-  res.send('✅ iGmailVoice Webhook Server is running properly!');
+  res.send(`
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <meta name="google-site-verification" content="B-5Wkljbwui-fO3hoQGSTe4Em6hSG78H25BjJ21KtaY" />
+        <title>iGmailVoice Webhook Server</title>
+    </head>
+    <body style="font-family: Arial, sans-serif; padding: 2rem; text-align: center;">
+        <h2 style="color: #4CAF50;">✅ iGmailVoice Webhook Server is running properly!</h2>
+        <p>System is online. Google Verification Tag is active.</p>
+    </body>
+    </html>
+  `);
 });
 
 // Webhook endpoint for Gmail Pub/Sub Push
