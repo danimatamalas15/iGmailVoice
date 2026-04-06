@@ -3,8 +3,9 @@ import {
   statusCodes,
 } from '@react-native-google-signin/google-signin';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Alert } from 'react-native';
 
-const WEB_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID || 'dummy_client_id_for_typechecking';
+const WEB_CLIENT_ID = '779836222469-ivupug4k6vv1sthnv09pfgmsb7arov9i.apps.googleusercontent.com';
 const SCOPES = ['https://mail.google.com/']; 
 const ASYNC_STORAGE_TOKEN_KEY = 'gmail_access_token';
 
@@ -59,8 +60,10 @@ export class AuthService {
         console.log('Sign in already in progress');
       } else if (error.code === statusCodes.PLAY_SERVICES_NOT_AVAILABLE) {
         console.log('Play services not available');
+        Alert.alert('Error', 'Google Play Services no está disponible.');
       } else {
         console.error('Sign in error', error);
+        Alert.alert('Error de Inicio de Sesión', error?.message || JSON.stringify(error) || 'Error desconocido al conectar con Google.');
       }
       return null;
     }
