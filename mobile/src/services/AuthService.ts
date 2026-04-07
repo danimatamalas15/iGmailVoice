@@ -5,7 +5,7 @@ import {
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Alert } from 'react-native';
 
-const WEB_CLIENT_ID = '779836222469-ivupug4k6vv1sthnv09pfgmsb7arov9i.apps.googleusercontent.com';
+const WEB_CLIENT_ID = '779836222469-ck1gm9kh911fbgom853s1faa1s7hop7i.apps.googleusercontent.com';
 const SCOPES = ['https://mail.google.com/']; 
 const ASYNC_STORAGE_TOKEN_KEY = 'gmail_access_token';
 
