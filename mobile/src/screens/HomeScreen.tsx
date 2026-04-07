@@ -3,19 +3,6 @@ import { View, FlatList, StyleSheet, RefreshControl } from 'react-native';
 import { Appbar, List, Avatar, FAB, useTheme, Button, Text } from 'react-native-paper';
 import { AuthService } from '../services/AuthService';
 import { GmailService, EmailData } from '../services/GmailService';
-import * as Notifications from 'expo-notifications';
-import { NotificationsService } from '../services/NotificationsService';
-import { GoogleSignin } from '@react-native-google-signin/google-signin';
-
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowAlert: true,
-    shouldPlaySound: true,
-    shouldSetBadge: true,
-    shouldShowBanner: true,
-    shouldShowList: true,
-  }),
-});
 
 export function HomeScreen({ navigation }: any) {
   const [emails, setEmails] = useState<EmailData[]>([]);
@@ -23,6 +10,8 @@ export function HomeScreen({ navigation }: any) {
   const [token, setToken] = useState<string | null>(null);
   const theme = useTheme();
 
+  // Polling trackers
+  const lastSeenMessageId = useRef<string | null>(null);
   const isAgentActive = useRef<boolean>(false);
 
   const handleLogin = async () => {
@@ -37,12 +26,15 @@ export function HomeScreen({ navigation }: any) {
     if (!currentToken) return;
     setLoading(true);
     try {
-      // Activar la suscripción Push en la API de Gmail
       await GmailService.startWatch(currentToken);
 
       const client = await (GmailService as any).getClient(currentToken);
       const res = await client.get('/messages?maxResults=10&labelIds=INBOX');
       const messages = res.data.messages || [];
+
+      if (messages.length > 0 && !lastSeenMessageId.current) {
+        lastSeenMessageId.current = messages[0].id;
+      }
 
       const detailedEmails = [];
       for (const msg of messages) {
@@ -50,20 +42,6 @@ export function HomeScreen({ navigation }: any) {
         if (details) detailedEmails.push(details);
       }
       setEmails(detailedEmails);
-
-      // Registrar para Push Notifications si tenemos el email
-      try {
-        const user = await GoogleSignin.getCurrentUser();
-        const email = user?.user.email;
-        if (email) {
-          const pushToken = await NotificationsService.registerForPushNotificationsAsync();
-          if (pushToken) {
-            await NotificationsService.sendTokenToBackend(email, pushToken);
-          }
-        }
-      } catch (e) {
-        console.warn("Could not register push token", e);
-      }
     } catch (e) {
       console.error('Failed to load emails', e);
     } finally {
@@ -78,42 +56,50 @@ export function HomeScreen({ navigation }: any) {
     });
   }, []);
 
-  // Foreground Push Notification Listener
+  // Foreground Polling Effect (Reverted from Expo Notifications)
   useEffect(() => {
     if (!token) return;
 
-    const notificationListener = Notifications.addNotificationReceivedListener(async (notification) => {
-      // Check if it's our new email push
-      const data = notification.request.content.data;
-      if (data?.type === 'GMAIL_NEW_MESSAGE' && data?.historyId) {
-        if (isAgentActive.current) return;
+    const pollNewEmails = async () => {
+      if (isAgentActive.current) return;
+      
+      try {
+        const client = await (GmailService as any).getClient(token);
+        // maxResults=1 gets the absolute latest email in the INBOX
+        const res = await client.get('/messages?maxResults=1&labelIds=INBOX');
+        const messages = res.data.messages || [];
         
-        try {
-          // Fetch exact newest email from Gmail
-          const client = await (GmailService as any).getClient(token);
-          const res = await client.get('/messages?maxResults=1&labelIds=INBOX');
-          const messages = res.data.messages || [];
+        if (messages.length > 0) {
+          const latestMsgId = messages[0].id;
           
-          if (messages.length > 0) {
+          if (lastSeenMessageId.current && lastSeenMessageId.current !== latestMsgId) {
+            // New email arrived!
             isAgentActive.current = true;
-            const newEmailDetails = await GmailService.getMessage(token, messages[0].id);
+            lastSeenMessageId.current = latestMsgId;
+            
+            const newEmailDetails = await GmailService.getMessage(token, latestMsgId);
             if (newEmailDetails) {
+              // Reload visual list silently
               loadEmails(token);
+              // Trigger Assistant directly! "Notificaciones directas y preguntas"
               const { VoiceAgent } = await import('../services/VoiceAgent');
               await VoiceAgent.handleIncomingEmail(token, newEmailDetails);
             }
             isAgentActive.current = false;
+          } else if (!lastSeenMessageId.current) {
+             // In case it wasn't populated yet
+             lastSeenMessageId.current = latestMsgId;
           }
-        } catch (e) {
-          console.warn('Push processing failed', e);
-          isAgentActive.current = false;
         }
+      } catch (e) {
+        console.warn('Polling check failed', e);
+        isAgentActive.current = false; // Release lock on error
       }
-    });
-
-    return () => {
-      notificationListener.remove();
     };
+
+    const intervalId = setInterval(pollNewEmails, 15000); // Check exactly every 15s
+    
+    return () => clearInterval(intervalId);
   }, [token]);
 
   if (!token) {
@@ -153,7 +139,6 @@ export function HomeScreen({ navigation }: any) {
         style={[styles.fab, { backgroundColor: theme.colors.primaryContainer }]}
         icon="microphone"
         onPress={async () => {
-          // Manual trigger for Mode 2 or manual test
           if (emails.length > 0 && !isAgentActive.current) {
               isAgentActive.current = true;
               const { VoiceAgent } = await import('../services/VoiceAgent');
