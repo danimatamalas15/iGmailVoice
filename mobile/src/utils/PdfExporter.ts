@@ -52,18 +52,20 @@ export class PdfExporter {
 
       // 4. Save to Downloads
       if (Platform.OS === 'android') {
+        // @ts-ignore: TS bug in local expo-file-system version
         const permissions = await FileSystem.StorageAccessFramework.requestDirectoryPermissionsAsync();
         if (permissions.granted) {
           try {
             // We use StorageAccessFramework to save cleanly to external storage
+            // @ts-ignore
             const destUri = await FileSystem.StorageAccessFramework.createFileAsync(
               permissions.directoryUri,
               fileName,
               'application/pdf'
             );
             // Copy file by reading binary
-            const base64Data = await FileSystem.readAsStringAsync(uri, { encoding: FileSystem.EncodingType.Base64 });
-            await FileSystem.writeAsStringAsync(destUri, base64Data, { encoding: FileSystem.EncodingType.Base64 });
+            const base64Data = await FileSystem.readAsStringAsync(uri, { encoding: 'base64' as any });
+            await FileSystem.writeAsStringAsync(destUri, base64Data, { encoding: 'base64' as any });
             return true;
           } catch (e) {
             console.error('SAF Write error', e);
