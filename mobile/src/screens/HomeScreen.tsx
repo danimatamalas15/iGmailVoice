@@ -32,8 +32,21 @@ export function HomeScreen({ navigation }: any) {
       const res = await client.get('/messages?maxResults=10&labelIds=INBOX');
       const messages = res.data.messages || [];
 
-      if (messages.length > 0 && !lastSeenMessageId.current) {
-        lastSeenMessageId.current = messages[0].id;
+      if (messages.length > 0) {
+        const latestMsgId = messages[0].id;
+        if (lastSeenMessageId.current && lastSeenMessageId.current !== latestMsgId) {
+          // Detectado en carga manual, lanzamos Asistente
+          if (!isAgentActive.current) {
+            isAgentActive.current = true;
+            const newEmailDetails = await GmailService.getMessage(currentToken, latestMsgId);
+            if (newEmailDetails) {
+              const { VoiceAgent } = await import('../services/VoiceAgent');
+              await VoiceAgent.handleIncomingEmail(currentToken, newEmailDetails);
+            }
+            isAgentActive.current = false;
+          }
+        }
+        lastSeenMessageId.current = latestMsgId;
       }
 
       const detailedEmails = [];
