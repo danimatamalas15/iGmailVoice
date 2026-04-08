@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { Audio } from 'expo-av';
+import * as Speech from 'expo-speech';
 
 const OPENAI_API_KEY = process.env.EXPO_PUBLIC_OPENAI_API_KEY || '';
 const ELEVENLABS_API_KEY = process.env.EXPO_PUBLIC_ELEVENLABS_API_KEY || '';
@@ -80,51 +81,19 @@ export class AudioServices {
   }
 
   /**
-   * Generates Text-to-Speech audio and plays it immediately via expo-av
+   * Generates Text-to-Speech audio and plays it immediately via expo-speech
    */
   static async speak(text: string): Promise<void> {
-    return new Promise(async (resolve, reject) => {
+    return new Promise((resolve) => {
       try {
-        // Implementation with ElevenLabs using default voice ID
-        const voiceId = "21m00Tcm4TlvDq8ikWAM"; // Rachel dummy ID
-        
-        const response = await axios.post(
-          `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}?output_format=mp3_44100_128`,
-          {
-            text: text,
-            model_id: "eleven_multilingual_v2"
-          },
-          {
-            headers: {
-              'xi-api-key': ELEVENLABS_API_KEY,
-              'Content-Type': 'application/json',
-              'Accept': 'audio/mpeg'
-            },
-            responseType: 'arraybuffer' // We need binary data for Audio playback
-          }
-        );
-
-        // Save binary data to a temporary file in FileSystem to play it
-        const FileSystem = (await import('expo-file-system')).default;
-        const fileUri = FileSystem.cacheDirectory + 'tts_temp.mp3';
-        
-        // base64 encode the response
-        const base64Audio = btoa(new Uint8Array(response.data).reduce((data, byte) => data + String.fromCharCode(byte), ''));
-        
-        await FileSystem.writeAsStringAsync(fileUri, base64Audio, { encoding: FileSystem.EncodingType.Base64 });
-
-        const { sound } = await Audio.Sound.createAsync(
-          { uri: fileUri },
-          { shouldPlay: true }
-        );
-
-        sound.setOnPlaybackStatusUpdate((status) => {
-          if (status.isLoaded && status.didJustFinish) {
-            sound.unloadAsync();
-            resolve();
+        Speech.speak(text, {
+          language: 'es-ES', // Ajustable por configuración
+          onDone: () => resolve(),
+          onError: (error) => {
+             console.error('Error in expo-speech:', error);
+             resolve();
           }
         });
-
       } catch (error) {
         console.error('Error generating/playing TTS:', error);
         resolve(); // resolve anyway so standard flow continues
