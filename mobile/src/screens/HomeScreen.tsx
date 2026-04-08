@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { View, FlatList, StyleSheet, RefreshControl } from 'react-native';
-import { Appbar, List, Avatar, FAB, useTheme, Button, Text } from 'react-native-paper';
+import { Appbar, List, Card, Avatar, FAB, useTheme, Button, Text } from 'react-native-paper';
 import { AuthService } from '../services/AuthService';
 import { GmailService, EmailData } from '../services/GmailService';
 
@@ -136,15 +136,32 @@ export function HomeScreen({ navigation }: any) {
         data={emails}
         keyExtractor={item => item.id}
         refreshControl={<RefreshControl refreshing={loading} onRefresh={loadEmails} />}
+        contentContainerStyle={{ padding: 10, paddingBottom: 80 }}
         renderItem={({ item }) => (
-          <List.Item
-            title={item.subject}
-            description={item.snippet}
-            left={props => <Avatar.Text {...props} label={item.from.charAt(0).toUpperCase()} size={40} />}
-            onPress={() => console.log('Tapped', item.id)}
-            titleNumberOfLines={1}
-            descriptionNumberOfLines={2}
-          />
+          <Card 
+            style={styles.emailCard} 
+            mode="elevated" 
+            elevation={2}
+            onPress={async () => {
+              if (!isAgentActive.current) {
+                  isAgentActive.current = true;
+                  const { VoiceAgent } = await import('../services/VoiceAgent');
+                  await VoiceAgent.handleIncomingEmail(token, item);
+                  isAgentActive.current = false;
+              }
+            }}
+          >
+            <Card.Title
+              title={item.from.split('<')[0].trim() || item.from}
+              titleStyle={{ fontWeight: 'bold' }}
+              subtitle={item.subject}
+              subtitleStyle={{ fontWeight: 'bold', color: theme.colors.primary }}
+              left={props => <Avatar.Text {...props} label={item.from.charAt(0).toUpperCase()} size={40} />}
+            />
+            <Card.Content>
+              <Text numberOfLines={4} style={{ color: '#444' }}>{item.snippet}</Text>
+            </Card.Content>
+          </Card>
         )}
       />
 
@@ -165,8 +182,9 @@ export function HomeScreen({ navigation }: any) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#fff' },
+  container: { flex: 1, backgroundColor: '#f9f9f9' },
   centerContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 },
   title: { marginBottom: 10, fontWeight: 'bold' },
   fab: { position: 'absolute', margin: 16, right: 0, bottom: 0 },
+  emailCard: { marginBottom: 15, backgroundColor: '#ffffff' },
 });
